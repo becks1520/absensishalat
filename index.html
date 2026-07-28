@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Absensi Shalat Mobile</title>
+    <title>My Prayer Tracker 🚀</title>
     <!-- Library QR Scanner -->
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
@@ -105,12 +105,12 @@
 <body>
 
 <div class="card">
-    <h2>Absensi Shalat 🕌</h2>
+    <h2>My Prayer Tracker 🚀</h2>
     <div id="prayerDisplay" class="badge-prayer">Mendeteksi...</div>
 
     <!-- Tombol Scan QR -->
     <button id="scanBtn" class="btn-scan" onclick="toggleScanner()">
-        📷 Scan QR
+        📷 Ambil Poin Pahala
     </button>
 
     <!-- Kamera Pemindai Bersih -->
@@ -118,7 +118,7 @@
         <div id="reader"></div>
     </div>
 
-    <div id="status">Klik tombol di atas untuk mulai scan</div>
+    <div id="status">Arahkan kameramu & kumpulkan pahalanya! ✨</div>
 </div>
 
 <script>
@@ -134,7 +134,7 @@
     let lastScannedTime = 0;
     const COOLDOWN_MS = 5000; // Jeda 5 detik untuk ID QR yang sama
 
-    // FITUR 1: FUNGSI BEEP SOUND (TANPA FILE EXTERNAL)
+    // FITUR BEEP SOUND
     function playBeepSound() {
         try {
             const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -142,30 +142,22 @@
             const gainNode = audioCtx.createGain();
 
             oscillator.type = "sine";
-            oscillator.frequency.value = 880; // Nada A5 (Suara "Bip" jernih)
+            oscillator.frequency.value = 880; // Suara Bip
 
             oscillator.connect(gainNode);
             gainNode.connect(audioCtx.destination);
 
             oscillator.start();
-            
-            // Suara memudar dalam 0.15 detik
             gainNode.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.15);
             oscillator.stop(audioCtx.currentTime + 0.15);
         } catch (e) {
-            console.log("Audio tidak dapat diputar:", e);
+            console.log("Audio error:", e);
         }
     }
 
     function autoSelectPrayer() {
         const now = new Date();
         const currentMins = now.getHours() * 60 + now.getMinutes();
-
-        // Subuh   (04:42 - 05:58) -> 282 s.d. 358 menit
-        // Dzuhur  (11:58 - 15:19) -> 718 s.d. 919 menit
-        // Ashar   (15:19 - 17:52) -> 919 s.d. 1072 menit
-        // Maghrib (17:52 - 19:04) -> 1072 s.d. 1144 menit
-        // Isya    (19:04 - 04:42) -> 1144 s.d. 282 menit
 
         if (currentMins >= 282 && currentMins < 358) {
             currentPrayer = "Subuh";
@@ -208,7 +200,7 @@
         const scanBtn = document.getElementById("scanBtn");
 
         container.style.display = "block";
-        statusDiv.innerText = "Arahkan kamera ke QR/Barcode...";
+        statusDiv.innerText = "Arahkan kameramu ke QR Code... ✨";
         statusDiv.style.color = "#059669";
         scanBtn.innerHTML = "❌ Tutup Kamera";
 
@@ -236,12 +228,12 @@
         if (html5QrCode && isScanning) {
             html5QrCode.stop().then(() => {
                 container.style.display = "none";
-                scanBtn.innerHTML = "📷 Scan QR";
+                scanBtn.innerHTML = "📷 Ambil Poin Pahala";
                 isScanning = false;
             }).catch(err => console.error(err));
         } else {
             container.style.display = "none";
-            scanBtn.innerHTML = "📷 Scan QR";
+            scanBtn.innerHTML = "📷 Ambil Poin Pahala";
             isScanning = false;
         }
     }
@@ -249,28 +241,22 @@
     function onScanSuccess(decodedText) {
         const now = Date.now();
 
-        // FITUR 2: PENCEGAHAN DOUBLE SCAN (COOLDOWN 5 DETIK)
-        // Jika kode QR yang sama discan lagi dalam jangka waktu < 5 detik, abaikan.
         if (decodedText === lastScannedCode && (now - lastScannedTime) < COOLDOWN_MS) {
             return;
         }
 
-        // Catat waktu dan isi scan terbaru
         lastScannedCode = decodedText;
         lastScannedTime = now;
 
-        // JALANKAN SUARA BEEP
         playBeepSound();
 
         let statusDiv = document.getElementById("status");
 
-        // Otomatis tutup kamera setelah scan berhasil
         stopScanner();
 
         statusDiv.innerText = "⏳ Memproses ID: " + decodedText + "...";
         statusDiv.style.color = "#059669";
 
-        // Mengirim data ke Google Sheets
         fetch(SCRIPT_URL, {
             method: "POST",
             headers: { "Content-Type": "text/plain;charset=utf-8" },
@@ -296,7 +282,7 @@
     }
 
     function onScanError(errorMessage) {
-        // Abaikan error per-frame saat mencari QR
+        // Abaikan error per-frame
     }
 
     autoSelectPrayer();
