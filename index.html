@@ -353,34 +353,78 @@
         playBeepSound();
 
         let statusDiv = document.getElementById("status");
-
         stopScanner();
 
-        statusDiv.innerText = "⏳ Memproses ID: " + decodedText + "...";
+        // Ambil lokasi GPS tepat saat QR berhasil dipindai.
+        // Tidak ada radius/geofence: lokasi hanya dicatat.
+        statusDiv.innerText = "📍 Mengambil lokasi GPS...";
         statusDiv.style.color = "#059669";
 
-        fetch(SCRIPT_URL, {
-            method: "POST",
-            headers: { "Content-Type": "text/plain;charset=utf-8" },
-            body: JSON.stringify({
-                studentId: decodedText,
-                prayerName: currentPrayer
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if(data.status === "success") {
-                statusDiv.innerText = "✅ " + data.message;
-                statusDiv.style.color = "#10b981";
-            } else {
-                statusDiv.innerText = "❌ " + data.message;
-                statusDiv.style.color = "#ef4444";
-            }
-        })
-        .catch(error => {
-            statusDiv.innerText = "❌ Gagal terhubung ke server!";
+        if (!navigator.geolocation) {
+            statusDiv.innerText = "❌ Perangkat/browser tidak mendukung lokasi GPS.";
             statusDiv.style.color = "#ef4444";
-        });
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            function(position) {
+                const latitude = position.coords.latitude;
+                const longitude = position.coords.longitude;
+                const accuracy = position.coords.accuracy;
+
+                statusDiv.innerText =
+                    "📍 Lokasi ditemukan (akurasi ±" + Math.round(accuracy) + " m). Menyimpan...";
+                statusDiv.style.color = "#059669";
+
+                fetch(SCRIPT_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify({
+                        studentId: decodedText,
+                        prayerName: currentPrayer,
+                        latitude: latitude,
+                        longitude: longitude,
+                        accuracy: accuracy
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if(data.status === "success") {
+                        statusDiv.innerText = "✅ " + data.message;
+                        statusDiv.style.color = "#10b981";
+                    } else {
+                        statusDiv.innerText = "❌ " + data.message;
+                        statusDiv.style.color = "#ef4444";
+                    }
+                })
+                .catch(error => {
+                    console.error("Gagal mengirim absensi:", error);
+                    statusDiv.innerText = "❌ Gagal terhubung ke server!";
+                    statusDiv.style.color = "#ef4444";
+                });
+            },
+            function(error) {
+                console.error("GPS error:", error);
+
+                let message = "❌ Lokasi GPS tidak dapat diambil.";
+
+                if (error.code === 1) {
+                    message = "❌ Izin lokasi ditolak. Izinkan lokasi lalu scan kembali.";
+                } else if (error.code === 2) {
+                    message = "❌ Lokasi tidak tersedia. Aktifkan GPS/lokasi perangkat.";
+                } else if (error.code === 3) {
+                    message = "❌ Pengambilan lokasi terlalu lama. Coba scan kembali.";
+                }
+
+                statusDiv.innerText = message;
+                statusDiv.style.color = "#ef4444";
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 15000,
+                maximumAge: 0
+            }
+        );
     }
 
     function onScanError(errorMessage) {
